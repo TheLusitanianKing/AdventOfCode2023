@@ -1,2 +1,6 @@
 profile = default
 version = 0.26.1
+
+break-separators = before
+break-before-in = auto
+dock-collection-brackets = false

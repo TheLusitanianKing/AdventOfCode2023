@@ -16,8 +16,7 @@ let get_calibration row =
     match cs with
     | [] -> List.rev acc |> make_int_from_acc
     | x :: xs when Char.is_digit x -> helper (x :: acc) xs
-    | _ :: xs -> helper acc xs
-  in
+    | _ :: xs -> helper acc xs in
   helper [] @@ String.to_list row
 
 let%test "Calibration (1)" = get_calibration "a1b2c3d4e5f" = 15
@@ -25,16 +24,15 @@ let%test "Calibration (2)" = get_calibration "treb7uchet" = 77
 
 (* Part 2 *)
 let written_numbers =
-  [
-    ("one", 1);
-    ("two", 2);
-    ("three", 3);
-    ("four", 4);
-    ("five", 5);
-    ("six", 6);
-    ("seven", 7);
-    ("eight", 8);
-    ("nine", 9);
+  [ ("one", 1)
+  ; ("two", 2)
+  ; ("three", 3)
+  ; ("four", 4)
+  ; ("five", 5)
+  ; ("six", 6)
+  ; ("seven", 7)
+  ; ("eight", 8)
+  ; ("nine", 9)
   ]
 
 let parse_written_number x =
@@ -69,8 +67,7 @@ let get_calibration_bis row =
           helper ((Int.to_string x |> fun ix -> String.get ix 0) :: acc) s'
       | None ->
           let h = String.get s 0 in
-          if Char.is_digit h then helper (h :: acc) s' else helper acc s'
-  in
+          if Char.is_digit h then helper (h :: acc) s' else helper acc s' in
   helper [] row
 
 let%test "Calibration bis (1)" = get_calibration_bis "two1nine" = 29
@@ -83,12 +80,10 @@ let main rows =
   let part1 =
     rows
     |> List.fold ~init:0 ~f:(fun acc x -> acc + get_calibration x)
-    |> Printf.sprintf "Part 1: %d"
-  in
+    |> Printf.sprintf "Part 1: %d" in
   let part2 =
     rows
     |> List.fold ~init:0 ~f:(fun acc x -> acc + get_calibration_bis x)
-    |> Printf.sprintf "Part 2: %d"
-  in
+    |> Printf.sprintf "Part 2: %d" in
   Stdio.print_endline part1;
   Stdio.print_endline part2
