@@ -9,9 +9,9 @@ let run_day day_number input_filename () =
   with _ -> Stdio.print_endline "Could not read the input file."
 
 let command =
-  Command.basic_spec
-    ~summary:"Gives AoC result for the given day"
-    Command.Spec.(empty
+  Command.basic_spec ~summary:"Gives AoC result for the given day"
+    Command.Spec.(
+      empty
       +> anon ("day" %: int)
       +> flag "input" (required Filename.arg_type) ~doc:"Input for the day")
     run_day

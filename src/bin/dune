@@ -2,4 +2,5 @@
  (public_name aoc2023)
  (name main)
  (libraries aoc2023 core core_unix.command_unix)
- (preprocess (pps ppx_jane)))
+ (preprocess
+  (pps ppx_jane)))
