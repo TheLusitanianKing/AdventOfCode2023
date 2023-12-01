@@ -1,0 +1,20 @@
+(lang dune 3.11)
+
+(name aoc2023)
+
+(generate_opam_files true)
+
+(source
+ (github TheLusitanianKing/AdventOfCode2023))
+
+(authors "Alexandre Gomes")
+
+(maintainers "Alexandre Gomes")
+
+(package
+ (name aoc2023)
+ (synopsis "Advent of Code 2023")
+ (description "Advent of Code 2023 in OCaml")
+ (depends ocaml dune))
+
+; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project
