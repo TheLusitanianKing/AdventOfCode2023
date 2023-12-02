@@ -7,7 +7,9 @@ let run_day day_number input_filename () =
     | 1 -> Aoc2023.Day1.main file_content
     | 2 -> Aoc2023.Day2.main file_content
     | _ -> Stdio.print_endline "This day hasn't been done yet."
-  with _ -> Stdio.print_endline "Could not read the input file."
+  with
+  | Sys_error _ -> Stdio.print_endline "Could not read the input file." 
+  | _ -> Stdio.print_endline "Failed to solve the given day."
 
 let command =
   Command.basic_spec ~summary:"Gives AoC result for the given day"
