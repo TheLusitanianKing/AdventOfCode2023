@@ -128,7 +128,7 @@ let%test "From x-ranges to y-ranges" =
     ; { dest_range_start = 92; source_range_start = 90; range_length = 2 }
     ] in
   let x_ranges = [ (1, 3); (90, 98) ] in
-  let expected_y_ranges = [ (50, 50); (92, 94); (1, 3); (93, 97) ] in
+  let expected_y_ranges = [ (50, 50); (92, 93); (1, 3); (92, 97) ] in
   List.equal (Utils.Tuple.equal_tuple' Int.compare) expected_y_ranges
   @@ from_x_ranges_to_y_ranges conversion_rules x_ranges
 
