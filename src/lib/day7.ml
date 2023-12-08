@@ -39,67 +39,38 @@ end
 
 module Type = struct
   type t =
-    | HighCard of Card.t
-    | OnePair of Card.t
-    | TwoPair of Card.t * Card.t
-    | ThreeOfAKind of Card.t
-    | FullHouse of Card.t * Card.t
-    | FourOfAKind of Card.t
-    | FiveOfAKind of Card.t
-  [@@deriving eq, ord, show]
-
-  let to_enum = function
-    | HighCard _ -> 0
-    | OnePair _ -> 1
-    | TwoPair _ -> 2
-    | ThreeOfAKind _ -> 3
-    | FullHouse _ -> 4
-    | FourOfAKind _ -> 5
-    | FiveOfAKind _ -> 6
-
-  let partial_compare t1 t2 = Int.compare (to_enum t1) (to_enum t2)
-  let partial_eq t1 t2 = partial_compare t1 t2 = 0
+    | HighCard
+    | OnePair
+    | TwoPair
+    | ThreeOfAKind
+    | FullHouse
+    | FourOfAKind
+    | FiveOfAKind
+  [@@deriving eq, enum, ord, show]
 
   let type_of_play (cs : Card.t list) : t =
     let grouped_cards =
       cs
       |> List.sort ~compare:Card.compare
       |> List.group ~break:(fun x y -> not @@ Card.equal x y)
-      |> List.map ~f:(fun grouped_cards ->
-             (List.length grouped_cards, grouped_cards))
-      |> List.sort ~compare:(fun (l1, gcs1) (l2, gcs2) ->
-             let len_cpt = Int.compare l1 l2 in
-             if len_cpt <> 0 then len_cpt
-             else Card.compare (List.hd_exn gcs1) (List.hd_exn gcs2))
+      |> List.map ~f:List.length
+      |> List.sort ~compare:Int.compare
       |> List.rev in
     match grouped_cards with
     | [] -> failwith "Impossible unless the hand is empty which shouldn't parse"
-    | (5, gcs) :: _ ->
-        let c = List.hd_exn gcs in
-        FiveOfAKind c
-    | (4, gcs) :: _ ->
-        let c = List.hd_exn gcs in
-        FourOfAKind c
-    | (3, gcs) :: (2, gcs') :: _ ->
-        let c1 = List.hd_exn gcs in
-        let c2 = List.hd_exn gcs' in
-        FullHouse (c1, c2)
-    | (3, gcs) :: _ ->
-        let c = List.hd_exn gcs in
-        ThreeOfAKind c
-    | (2, gcs) :: (2, gcs') :: _ ->
-        let c1 = List.hd_exn gcs and c2 = List.hd_exn gcs' in
-        if Card.compare c1 c2 > 0 then TwoPair (c1, c2) else TwoPair (c2, c1)
-    | (2, gcs) :: _ ->
-        let c = List.hd_exn gcs in
-        OnePair c
-    | (1, gcs) :: _ ->
-        let c = List.hd_exn gcs in
-        HighCard c
+    | 5 :: _ -> FiveOfAKind
+    | 4 :: _ -> FourOfAKind
+    | 3 :: 2 :: _ -> FullHouse
+    | 3 :: _ -> ThreeOfAKind
+    | 2 :: 2 :: _ -> TwoPair
+    | 2 :: _ -> OnePair
+    | 1 :: _ -> HighCard
     | _ ->
         failwith
           "Impossible unless the hand has more than 5 cards, which shouldn't \
            parse"
+
+  let type_of_play_with_joker _cs : t = failwith "TODO"
 end
 
 module Play = struct
@@ -120,28 +91,31 @@ module Play = struct
             { bid; hand })
 end
 
+let rank_plays ps get_type_from_play =
+  ps
+  |> List.map ~f:(fun (p : Play.t) -> (p, get_type_from_play p.hand))
+  |> List.sort ~compare:(fun ((p1 : Play.t), t1) (p2, t2) ->
+         let t_cpt = Type.compare t1 t2 in
+         if t_cpt <> 0 then t_cpt else List.compare Card.compare p1.hand p2.hand)
+  |> fun sorted_plays ->
+  List.zip_exn
+    (List.range 1 (List.length sorted_plays) ~start:`inclusive ~stop:`inclusive)
+    sorted_plays
+
+let solve ranked_plays =
+  ranked_plays
+  |> List.map ~f:(fun (rank, ((p : Play.t), _)) -> rank * p.bid)
+  |> List.fold ~init:0 ~f:( + )
+
 (* Main *)
 let main rows =
-  let plays =
-    rows
-    |> List.map ~f:(fun r ->
-           r |> Play.parse |> fun p -> (p, Type.type_of_play p.hand)) in
-  let sorted_plays =
-    plays
-    |> List.sort ~compare:(fun ((p1: Play.t), t1) (p2, t2) ->
-           let t_cpt = Type.partial_compare t1 t2 in
-           if t_cpt <> 0 then t_cpt
-           else List.compare Card.compare p1.hand p2.hand) in
-  let ranked_plays =
-    List.zip_exn
-      (List.range 1 (List.length sorted_plays) ~start:`inclusive
-         ~stop:`inclusive)
-      sorted_plays in
-  let part_1 =
-    ranked_plays
-    |> List.map ~f:(fun (rank, ((p : Play.t), _)) -> rank * p.bid)
-    |> List.fold ~init:0 ~f:( + ) in
-  Stdio.print_endline @@ Printf.sprintf "Part 1: %d" part_1
+  try
+    let plays = rows |> List.map ~f:Play.parse in
+    let part_1 = rank_plays plays Type.type_of_play |> solve in
+    (* let part_2 = rank_plays plays Type.type_of_play_with_joker |> solve in *)
+    Stdio.print_endline @@ Printf.sprintf "Part 1: %d" part_1;
+    (* Stdio.print_endline @@ Printf.sprintf "Part 2: %d" part_2; *)
+  with Parse_exception -> Stdio.print_endline "Failed to parse."
 
 (* Some testing *)
 let play_1 : Play.t = { hand = [ Three; Two; Ten; Three; King ]; bid = 765 }
@@ -161,26 +135,26 @@ let%test "Parsing play" =
   Play.equal result expected
 
 let%test "Type of play" =
-  let expected : Type.t = OnePair Three in
+  let expected : Type.t = OnePair in
   let result = Type.type_of_play play_1.hand in
   Type.equal result expected
 
 let%test "Type of play (2)" =
-  let expected : Type.t = ThreeOfAKind Five in
+  let expected : Type.t = ThreeOfAKind in
   let result = Type.type_of_play play_2.hand in
   Type.equal result expected
 
 let%test "Type of play (3)" =
-  let expected : Type.t = TwoPair (King, Seven) in
+  let expected : Type.t = TwoPair in
   let result = Type.type_of_play play_3.hand in
   Type.equal result expected
 
 let%test "Type of play (4)" =
-  let expected : Type.t = TwoPair (Jack, Ten) in
+  let expected : Type.t = TwoPair in
   let result = Type.type_of_play play_4.hand in
   Type.equal result expected
 
 let%test "Type of play (5)" =
-  let expected : Type.t = ThreeOfAKind Queen in
+  let expected : Type.t = ThreeOfAKind in
   let result = Type.type_of_play play_5.hand in
   Type.equal result expected
