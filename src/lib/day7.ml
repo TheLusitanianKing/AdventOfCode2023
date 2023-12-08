@@ -4,37 +4,45 @@ exception Parse_exception
 
 (* Modules *)
 module Card = struct
-  type t =
-    | Two
-    | Three
-    | Four
-    | Five
-    | Six
-    | Seven
-    | Eight
-    | Nine
-    | Ten
-    | Jack
-    | Queen
-    | King
-    | Ace
-  [@@deriving eq, ord, show, enum]
+  module T = struct
+    type t =
+      | Two
+      | Three
+      | Four
+      | Five
+      | Six
+      | Seven
+      | Eight
+      | Nine
+      | Ten
+      | Jack
+      | Queen
+      | King
+      | Ace
+    [@@deriving eq, ord, show, enum]
 
-  let parse = function
-    | '2' -> Two
-    | '3' -> Three
-    | '4' -> Four
-    | '5' -> Five
-    | '6' -> Six
-    | '7' -> Seven
-    | '8' -> Eight
-    | '9' -> Nine
-    | 'T' -> Ten
-    | 'J' -> Jack
-    | 'Q' -> Queen
-    | 'K' -> King
-    | 'A' -> Ace
-    | _ -> raise Parse_exception
+    let parse = function
+      | '2' -> Two
+      | '3' -> Three
+      | '4' -> Four
+      | '5' -> Five
+      | '6' -> Six
+      | '7' -> Seven
+      | '8' -> Eight
+      | '9' -> Nine
+      | 'T' -> Ten
+      | 'J' -> Jack
+      | 'Q' -> Queen
+      | 'K' -> King
+      | 'A' -> Ace
+      | _ -> raise Parse_exception
+  end
+
+  include T
+
+  let compare_with_joker t1 t2 =
+    let to_enum' t = if T.equal t Jack then -1 else to_enum t in
+    Int.compare (to_enum' t1) (to_enum' t2)
 end
 
 module Type = struct
@@ -48,15 +56,7 @@ module Type = struct
     | FiveOfAKind
   [@@deriving eq, enum, ord, show]
 
-  let type_of_play (cs : Card.t list) : t =
-    let grouped_cards =
-      cs
-      |> List.sort ~compare:Card.compare
-      |> List.group ~break:(fun x y -> not @@ Card.equal x y)
-      |> List.map ~f:List.length
-      |> List.sort ~compare:Int.compare
-      |> List.rev in
-    match grouped_cards with
+  let type_from_grouped_cards = function
     | [] -> failwith "Impossible unless the hand is empty which shouldn't parse"
     | 5 :: _ -> FiveOfAKind
     | 4 :: _ -> FourOfAKind
@@ -70,7 +70,38 @@ module Type = struct
           "Impossible unless the hand has more than 5 cards, which shouldn't \
            parse"
 
-  let type_of_play_with_joker _cs : t = failwith "TODO"
+  let type_of_play (cs : Card.t list) : t =
+    cs
+    |> List.sort ~compare:Card.compare
+    |> List.group ~break:(fun x y -> not @@ Card.equal x y)
+    |> List.map ~f:List.length
+    |> List.sort ~compare:Int.compare
+    |> List.rev |> type_from_grouped_cards
+
+  let type_of_play_with_joker cs : t =
+    let replace_first_if_needed joker xs =
+      if joker = 0 then xs
+      else
+        match xs with
+        | (_, x) :: (m, y) :: tl when Card.equal x Jack -> (m + joker, y) :: tl
+        | (_, x) :: _ when Card.equal x Jack -> xs
+        | (n, x) :: tl -> (n + joker, x) :: tl
+        | _ -> failwith "Impossible, shouldn't happen" in
+    cs
+    |> List.sort ~compare:Card.compare_with_joker
+    |> List.group ~break:(fun x y -> not @@ Card.equal x y)
+    |> List.map ~f:(fun grouped_cards ->
+           (List.length grouped_cards, List.hd_exn grouped_cards))
+    |> fun xs ->
+    let n, card = List.hd_exn xs in
+    let joker = if Card.equal card Jack then n else 0 in
+    xs
+    |> List.sort ~compare:(fun (n1, _) (n2, _) -> Int.compare n1 n2)
+    |> List.rev
+    |> replace_first_if_needed joker
+    |> List.map ~f:(fun (n, _) -> n)
+    |> List.sort ~compare:Int.compare
+    |> List.rev |> type_from_grouped_cards
 end
 
 module Play = struct
@@ -91,12 +122,12 @@ module Play = struct
             { bid; hand })
 end
 
-let rank_plays ps get_type_from_play =
+let rank_plays ps get_type_from_play card_compare =
   ps
   |> List.map ~f:(fun (p : Play.t) -> (p, get_type_from_play p.hand))
   |> List.sort ~compare:(fun ((p1 : Play.t), t1) (p2, t2) ->
          let t_cpt = Type.compare t1 t2 in
-         if t_cpt <> 0 then t_cpt else List.compare Card.compare p1.hand p2.hand)
+         if t_cpt <> 0 then t_cpt else List.compare card_compare p1.hand p2.hand)
   |> fun sorted_plays ->
   List.zip_exn
     (List.range 1 (List.length sorted_plays) ~start:`inclusive ~stop:`inclusive)
@@ -111,10 +142,12 @@ let solve ranked_plays =
 let main rows =
   try
     let plays = rows |> List.map ~f:Play.parse in
-    let part_1 = rank_plays plays Type.type_of_play |> solve in
-    (* let part_2 = rank_plays plays Type.type_of_play_with_joker |> solve in *)
+    let part_1 = rank_plays plays Type.type_of_play Card.compare |> solve in
+    let part_2 =
+      rank_plays plays Type.type_of_play_with_joker Card.compare_with_joker
+      |> solve in
     Stdio.print_endline @@ Printf.sprintf "Part 1: %d" part_1;
-    (* Stdio.print_endline @@ Printf.sprintf "Part 2: %d" part_2; *)
+    Stdio.print_endline @@ Printf.sprintf "Part 2: %d" part_2
   with Parse_exception -> Stdio.print_endline "Failed to parse."
 
 (* Some testing *)
@@ -157,4 +190,29 @@ let%test "Type of play (4)" =
 let%test "Type of play (5)" =
   let expected : Type.t = ThreeOfAKind in
   let result = Type.type_of_play play_5.hand in
+  Type.equal result expected
+
+let%test "Type of play w/ joker (1)" =
+  let expected : Type.t = OnePair in
+  let result = Type.type_of_play_with_joker play_1.hand in
+  Type.equal result expected
+
+let%test "Type of play w/ joker (2)" =
+  let expected : Type.t = FourOfAKind in
+  let result = Type.type_of_play_with_joker play_2.hand in
+  Type.equal result expected
+
+let%test "Type of play w/ joker (3)" =
+  let expected : Type.t = TwoPair in
+  let result = Type.type_of_play_with_joker play_3.hand in
+  Type.equal result expected
+
+let%test "Type of play w/ joker (4)" =
+  let expected : Type.t = FourOfAKind in
+  let result = Type.type_of_play_with_joker play_4.hand in
+  Type.equal result expected
+
+let%test "Type of play w/ joker (5)" =
+  let expected : Type.t = FourOfAKind in
+  let result = Type.type_of_play_with_joker play_5.hand in
   Type.equal result expected
