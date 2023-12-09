@@ -48,7 +48,7 @@ module Context = struct
 
   let run_until context ~start ~stop =
     let rec helper (insts : Direction.t list) current_node step =
-      if String.equal current_node stop then step
+      if stop current_node then step
       else
         match insts with
         | [] -> helper context.instructions current_node step
@@ -59,17 +59,30 @@ module Context = struct
             let _, k = Map.find_exn context.tree current_node in
             helper is k (step + 1) in
     helper [] start 0
+
+  let run_multi_until context ~start ~stop =
+    let initial_nodes = context.tree |> Map.keys |> List.filter ~f:start in
+    let first_zs = initial_nodes |> List.map ~f:(fun node -> run_until context ~start:node ~stop) in
+    Utils.Arithmetic.lcm_multi first_zs
 end
 
 let main rows =
   try
     let context = rows |> Context.parse in
-    let part_1 = context |> Context.run_until ~start:"AAA" ~stop:"ZZZ" in
-    Stdio.print_endline @@ Printf.sprintf "Part 1: %d" part_1
+    let part_1 = context |> Context.run_until ~start:"AAA" ~stop:(String.equal "ZZZ") in
+    let part_2 =
+      context
+      |> Context.run_multi_until
+           ~start:(String.is_suffix ~suffix:"A")
+           ~stop:(String.is_suffix ~suffix:"Z") in
+    Stdio.print_endline @@ Printf.sprintf "Part 1: %d" part_1;
+    Stdio.print_endline @@ Printf.sprintf "Part 2: %d" part_2
   with
-  | Direction.Parse_exception -> Stdio.prerr_endline "Could not parse the direction."
+  | Direction.Parse_exception ->
+      Stdio.prerr_endline "Could not parse the direction."
   | Tree.Parse_exception -> Stdio.prerr_endline "Could not parse the tree."
-  | Context.Parse_exception -> Stdio.prerr_endline "Could not parse the context."
+  | Context.Parse_exception ->
+      Stdio.prerr_endline "Could not parse the context."
 
 (* testing *)
 let%test "Parse tree" =
