@@ -5,7 +5,7 @@ let parse_history row =
   |> List.filter_map ~f:Utils.Int.int_of_string_or_none
   |> List.to_array
 
-let extrapolated_value history : int =
+let extrapolated_next_value history : int =
   let rec diff_until_all_zeros acc current =
     if current |> Array.for_all ~f:(Int.equal 0) then (0, acc)
     else if Array.length current = 1 then (current.(0), acc)
@@ -20,12 +20,23 @@ let extrapolated_value history : int =
   xs |> List.rev
   |> List.fold ~init:i ~f:(fun last_added arr -> last_added + Array.last arr)
 
+let extrapolated_prev_value history =
+  extrapolated_next_value
+    (history |> Array.rev_inplace;
+     history)
+
 let main rows =
+  let histories = rows |> List.map ~f:(fun x -> x |> parse_history) in
   let part_1 =
-    rows
-    |> List.map ~f:(fun x -> x |> parse_history |> extrapolated_value)
+    histories
+    |> List.map ~f:extrapolated_next_value
     |> List.fold ~init:0 ~f:( + ) in
-  Stdio.print_endline @@ Printf.sprintf "Part 1: %d" part_1
+  let part_2 =
+    histories
+    |> List.map ~f:extrapolated_prev_value
+    |> List.fold ~init:0 ~f:( + ) in
+  Stdio.print_endline @@ Printf.sprintf "Part 1: %d" part_1;
+  Stdio.print_endline @@ Printf.sprintf "Part 2: %d" part_2
 
 (* testing *)
 let histories =
@@ -39,9 +50,10 @@ let%test "Parsing" =
   let expected = [| -7; 6; 44; 130 |] in
   Array.equal Int.equal result expected
 
-let%test "Predict histories" =
+let%test "Extrapolate histories (next)" =
   let result =
-    histories |> List.map ~f:(fun l -> l |> List.to_array |> extrapolated_value)
+    histories
+    |> List.map ~f:(fun l -> l |> List.to_array |> extrapolated_next_value)
   in
   let expected = [ 18; 28; 68 ] in
   List.equal Int.equal result expected
