@@ -1,15 +1,15 @@
 open Core
 
 let day_mains =
-  [ Aoc2023.Day1.main
-  ; Aoc2023.Day2.main
-  ; Aoc2023.Day3.main
-  ; Aoc2023.Day4.main
-  ; Aoc2023.Day5.main
-  ; Aoc2023.Day6.main
-  ; Aoc2023.Day7.main
-  ; Aoc2023.Day8.main
-  ; Aoc2023.Day9.main
+  [ Aoc2023.Day01.main
+  ; Aoc2023.Day02.main
+  ; Aoc2023.Day03.main
+  ; Aoc2023.Day04.main
+  ; Aoc2023.Day05.main
+  ; Aoc2023.Day06.main
+  ; Aoc2023.Day07.main
+  ; Aoc2023.Day08.main
+  ; Aoc2023.Day09.main
   ; Aoc2023.Day10.main
   ]
 
