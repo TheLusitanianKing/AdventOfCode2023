@@ -108,22 +108,70 @@ module Context = struct
       then acc
       else
         let next_pos = next_coordinate current_pos dir in
-        if Utils.Tuple.equal_tuple' Int.compare next_pos start then acc
+        if Utils.Tuple.equal_tuple' Int.compare next_pos start then
+          current_pos :: acc
         else
           let next_dir_opt = direction_to context next_pos dir in
           match next_dir_opt with
           | None -> raise No_path_exception
           | Some next_dir -> helper (current_pos :: acc) next_pos next_dir in
-    helper [] start first_dir
+    start :: helper [] start first_dir
 
-  let farthest_distance l : int = (List.length l / 2) + 1
+  let farthest_distance l : int = List.length l / 2
+
+  let is_coordinate_inside_the_polygon (polygon_limits : (int * int) list)
+      coordinate =
+    let x, y = coordinate in
+    let segments =
+      List.zip_exn
+        (List.drop_last_exn polygon_limits)
+        (List.drop polygon_limits 1) in
+    segments
+    |> List.filter ~f:(fun ((p1_x, p1_y), (p2_x, p2_y)) ->
+           if
+             y > min p1_y p2_y
+             && y <= max p1_y p2_y
+             && x <= max p1_x p2_x
+             && not (Int.equal p1_y p2_y)
+           then
+             let xinters = ((y - p1_y) * (p2_x - p1_x) / (p2_y - p1_y)) + p1_x in
+             p1_x = p2_x || x <= xinters
+           else false)
+    |> fun filtered_segs ->
+    let c = Int.rem (List.length filtered_segs) 2 in
+    not (Int.equal c 0)
+
+  let all_coordinates_inside_the_polygon context
+      (polygon_limits : (int * int) list) : (int * int) list =
+    let y_max = Array.length context in
+    let x_max = Array.length context.(0) in
+    let all_coordinates =
+      Array.cartesian_product
+        (List.range 0 x_max ~start:`inclusive ~stop:`exclusive |> List.to_array)
+        (List.range 0 y_max ~start:`inclusive ~stop:`exclusive |> List.to_array)
+    in
+    let all_coordinates_outside_limits =
+      all_coordinates
+      |> Array.filter ~f:(fun c ->
+             not
+             @@ Array.mem
+                  (polygon_limits |> List.to_array)
+                  c
+                  ~equal:(Utils.Tuple.equal_tuple' Int.compare)) in
+    all_coordinates_outside_limits
+    |> Array.filter ~f:(is_coordinate_inside_the_polygon polygon_limits)
+    |> Array.to_list
 end
 
 let main rows =
   let context = rows |> Context.parse in
-  let l = context |> Context.loop in
-  let part_1 = Context.farthest_distance l in
-  Stdio.print_endline @@ Printf.sprintf "Part 1: %d" part_1
+  let limits = context |> Context.loop in
+  let part_1 = limits |> Context.farthest_distance in
+  let part_2 =
+    limits |> Context.all_coordinates_inside_the_polygon context |> List.length
+  in
+  Stdio.print_endline @@ Printf.sprintf "Part 1: %d" part_1;
+  Stdio.print_endline @@ Printf.sprintf "Part 2: %d" part_2
 
 (* testing *)
 let context = Context.parse [ "-L|F7"; "7S-7|"; "L|7||"; "-L-J|"; "L|-JF" ]
