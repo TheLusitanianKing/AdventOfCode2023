@@ -13,6 +13,14 @@ let find_point (matrix : 'a array array) ~f : int * int =
   | None -> raise Could_not_find_point_in_matrix
   | Some c -> c
 
+let find_points (matrix : 'a array array) ~f : (int * int) list =
+  matrix
+  |> Array.concat_mapi ~f:(fun row_i column ->
+         column
+         |> Array.filter_mapi ~f:(fun column_i x ->
+                if f x then Some (column_i, row_i) else None))
+  |> Array.to_list
+
 exception Could_not_get_all_coordinates_from_matrix
 
 let all_coordinates matrix =

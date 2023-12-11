@@ -11,6 +11,7 @@ let day_mains =
   ; Aoc2023.Day08.main
   ; Aoc2023.Day09.main
   ; Aoc2023.Day10.main
+  ; Aoc2023.Day11.main
   ]
 
 let run_day day_number input_filename () =
