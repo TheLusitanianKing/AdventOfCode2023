@@ -51,7 +51,7 @@ module Context = struct
            not @@ Utils.Tuple.equal_tuple' Int.compare c1 c2)
 
   let distance_between_galaxies (context : t) (galaxy_a : int * int)
-      (galaxy_b : int * int) : int =
+      (galaxy_b : int * int) coef : int =
     let exp_rows = context |> expanded_rows in
     let exp_cols = context |> expanded_cols in
     let x1, y1 = galaxy_a in
@@ -67,19 +67,26 @@ module Context = struct
       |> List.filter ~f:(fun exp_col ->
              exp_col > ds_x_start && exp_col < ds_x_stop) in
     ds_x_stop - ds_x_start + (ds_y_stop - ds_y_start)
-    + List.length touched_exp_cols
-    + List.length touched_exp_rows
+    + (List.length touched_exp_cols * coef)
+    + (List.length touched_exp_rows * coef)
 end
 
 let main rows =
   try
     let context = Context.parse rows in
+    let paired_galaxies = context |> Context.get_all_paired_galaxies in
     let part_1 =
-      context |> Context.get_all_paired_galaxies
+      paired_galaxies
       |> List.map ~f:(fun (g1, g2) ->
-             Context.distance_between_galaxies context g1 g2)
+             Context.distance_between_galaxies context g1 g2 1)
       |> List.fold ~init:0 ~f:( + ) in
-    Stdio.print_endline @@ Printf.sprintf "Part 1: %d" part_1
+    let part_2 =
+      paired_galaxies
+      |> List.map ~f:(fun (g1, g2) ->
+             Context.distance_between_galaxies context g1 g2 (1_000_000 - 1))
+      |> List.fold ~init:0 ~f:( + ) in
+    Stdio.print_endline @@ Printf.sprintf "Part 1: %d" part_1;
+    Stdio.print_endline @@ Printf.sprintf "Part 2: %d" part_2
   with Cell.Parse_exception -> Stdio.print_endline "Could not parse a cell"
 
 (* testing *)
@@ -116,27 +123,27 @@ let%test "All galaxies" =
 
 let%test "Distance between galaxies" =
   let expected = 9 in
-  let result = Context.distance_between_galaxies test_context (1, 5) (4, 9) in
+  let result = Context.distance_between_galaxies test_context (1, 5) (4, 9) 1 in
   Int.equal result expected
 
 let%test "Distance between galaxies (2)" =
   let expected = 9 in
-  let result = Context.distance_between_galaxies test_context (4, 9) (1, 5) in
+  let result = Context.distance_between_galaxies test_context (4, 9) (1, 5) 1 in
   Int.equal result expected
 
 let%test "Distance between galaxies (3)" =
   let expected = 15 in
-  let result = Context.distance_between_galaxies test_context (3, 0) (7, 8) in
+  let result = Context.distance_between_galaxies test_context (3, 0) (7, 8) 1 in
   Int.equal result expected
 
 let%test "Distance between galaxies (4)" =
   let expected = 17 in
-  let result = Context.distance_between_galaxies test_context (0, 2) (9, 6) in
+  let result = Context.distance_between_galaxies test_context (0, 2) (9, 6) 1 in
   Int.equal result expected
 
 let%test "Distance between galaxies (5)" =
   let expected = 5 in
-  let result = Context.distance_between_galaxies test_context (0, 9) (4, 9) in
+  let result = Context.distance_between_galaxies test_context (0, 9) (4, 9) 1 in
   Int.equal result expected
 
 let%test "Pair number" =
