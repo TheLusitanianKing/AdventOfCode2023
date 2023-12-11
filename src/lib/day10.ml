@@ -33,15 +33,9 @@ module Context = struct
   exception No_starting_point_exception
 
   let find_starting_point (context : t) : int * int =
-    context
-    |> Array.find_mapi ~f:(fun row_i column ->
-           column
-           |> Array.find_mapi ~f:(fun column_i p ->
-                  if Pipe.equal p Start then Some column_i else None)
-           |> Option.bind ~f:(fun column_i -> Some (column_i, row_i)))
-    |> function
-    | None -> raise No_starting_point_exception
-    | Some c -> c
+    try context |> Utils.Matrix.find_point ~f:(Pipe.equal Start)
+    with Utils.Matrix.Could_not_find_point_in_matrix ->
+      raise No_starting_point_exception
 
   exception No_path_exception
 
@@ -143,13 +137,7 @@ module Context = struct
 
   let all_coordinates_inside_the_polygon context
       (polygon_limits : (int * int) list) : (int * int) list =
-    let y_max = Array.length context in
-    let x_max = Array.length context.(0) in
-    let all_coordinates =
-      Array.cartesian_product
-        (List.range 0 x_max ~start:`inclusive ~stop:`exclusive |> List.to_array)
-        (List.range 0 y_max ~start:`inclusive ~stop:`exclusive |> List.to_array)
-    in
+    let all_coordinates = context |> Utils.Matrix.all_coordinates in
     let all_coordinates_outside_limits =
       all_coordinates
       |> Array.filter ~f:(fun c ->
