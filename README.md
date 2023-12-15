@@ -1,7 +1,7 @@
 # Advent of Code 2023
 https://adventofcode.com/2023
 
-![](https://geps.dev/progress/48)
+![](https://geps.dev/progress/50)
 
 ```bash
 dune build
