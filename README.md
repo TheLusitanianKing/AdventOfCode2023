@@ -1,7 +1,9 @@
 # Advent of Code 2023
 https://adventofcode.com/2023
 
-Days completed (at least part 1): ![](https://geps.dev/progress/60)
+Days completed (at least part 1):
+
+![](https://geps.dev/progress/60)
 
 ```bash
 dune build
