@@ -31,3 +31,6 @@ let all_coordinates matrix =
       (List.range 0 x_max ~start:`inclusive ~stop:`exclusive |> List.to_array)
       (List.range 0 y_max ~start:`inclusive ~stop:`exclusive |> List.to_array)
   with Invalid_argument _ -> raise Could_not_get_all_coordinates_from_matrix
+
+let parse rows ~f =
+  rows |> List.map ~f:(fun s -> s |> String.to_array |> Array.map ~f) |> List.to_array

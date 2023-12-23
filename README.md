@@ -3,7 +3,7 @@ https://adventofcode.com/2023
 
 Days completed (at least part 1):
 
-![](https://geps.dev/progress/60)
+![](https://geps.dev/progress/64)
 
 ```bash
 dune build
